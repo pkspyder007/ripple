@@ -34,7 +34,14 @@ export function compile(source, filename, options = {}) {
 					options?.minify_css ?? false,
 					options?.dev ?? false,
 				)
-			: transform_client(filename, source, analysis, false, options?.minify_css ?? false);
+			: transform_client(
+				filename,
+				source,
+				analysis,
+				false,
+				options?.minify_css ?? false,
+				options?.dev ?? false,
+			);
 
 	return result;
 }
@@ -65,6 +72,7 @@ export function compile_to_volar_mappings(source, filename, options = {}) {
 		analysis,
 		true,
 		options?.minify_css ?? false,
+		false,
 	);
 
 	return {

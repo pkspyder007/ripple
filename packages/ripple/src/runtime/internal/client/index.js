@@ -58,6 +58,8 @@ export {
 
 export { composite } from './composite.js';
 
+export { hmr, HMR } from './hmr.js';
+
 export { for_block as for, for_block_keyed as for_keyed } from './for.js';
 
 export { if_block as if } from './if.js';

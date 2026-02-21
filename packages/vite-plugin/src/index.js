@@ -964,6 +964,7 @@ import { hydrate, mount } from 'ripple';
 					const { js, css } = await compile(code, filename, {
 						mode: ssr ? 'server' : 'client',
 						dev: config?.command === 'serve',
+						hmr: config?.command === 'serve' && !ssr,
 					});
 
 					// Track modules with #server blocks for RPC (client build only)
@@ -975,6 +976,10 @@ import { hydrate, mount } from 'ripple';
 						const cssId = createVirtualImportId(filename, root, 'style');
 						cssCache.set(cssId, css);
 						js.code += `\nimport ${JSON.stringify(cssId)};\n`;
+					}
+
+					if (config?.command === 'serve' && !ssr && js.code) {
+						js.code += '\nif (import.meta.hot) import.meta.hot.accept();\n';
 					}
 
 					return js;
