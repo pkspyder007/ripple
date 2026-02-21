@@ -4629,10 +4629,7 @@ export function transform_client(filename, source, analysis, to_ts, minify_css, 
 				let defaultExportName = null;
 				if (decl.type === 'Identifier') {
 					defaultExportName = decl.name;
-				} else if (
-					(decl.type === 'FunctionDeclaration' || decl.type === 'Component') &&
-					decl.id
-				) {
+				} else if ((decl.type === 'FunctionDeclaration' || decl.type === 'Component') && decl.id) {
 					defaultExportName = decl.id.name;
 				}
 				if (defaultExportName) {

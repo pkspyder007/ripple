@@ -35,13 +35,13 @@ export function compile(source, filename, options = {}) {
 					options?.dev ?? false,
 				)
 			: transform_client(
-				filename,
-				source,
-				analysis,
-				false,
-				options?.minify_css ?? false,
-				options?.dev ?? false,
-			);
+					filename,
+					source,
+					analysis,
+					false,
+					options?.minify_css ?? false,
+					options?.dev ?? false,
+				);
 
 	return result;
 }
