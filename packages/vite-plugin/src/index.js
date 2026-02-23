@@ -978,10 +978,6 @@ import { hydrate, mount } from 'ripple';
 						js.code += `\nimport ${JSON.stringify(cssId)};\n`;
 					}
 
-					if (config?.command === 'serve' && !ssr && js.code) {
-						js.code += '\nif (import.meta.hot) import.meta.hot.accept();\n';
-					}
-
 					return js;
 				},
 			},
