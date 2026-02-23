@@ -20,11 +20,6 @@ export function hmr(fn) {
 	 * @param {Node} anchor
 	 * @param {Record<string, any>} props
 	 * @param {Block | null} block
-	 */
-	/**
-	 * @param {Node} anchor
-	 * @param {Record<string, any>} props
-	 * @param {Block | null} block
 	 * @type {Component & { [HMR]: { fn: Component, current: Tracked | null, update: (incoming: any) => void } }}
 	 */
 	function wrapper(anchor, props, block) {
@@ -60,11 +55,30 @@ export function hmr(fn) {
 		fn,
 		/** @type {Tracked | null} */
 		current: null,
-		update: (/** @type {{ [HMR]: { fn: Component, current: Tracked | null } }} */ incoming) => {
+		/**
+		 * Accept either a raw function or another hmr-wrapped component.
+		 * If wrapped, we also transfer `current` to the incoming wrapper so
+		 * subsequent HMR cycles on that wrapper still hold the live tracked ref.
+		 *
+		 * @param {Component | (Component & { [HMR]: { fn: Component, current: Tracked | null } })} incoming
+		 */
+		update: (incoming) => {
 			var cur = wrapper[HMR].current;
-			if (cur !== null) {
-				set(cur, incoming[HMR].fn);
-				incoming[HMR].current = cur;
+			if (cur === null) return;
+
+			var next_fn = /** @type {any} */ (incoming)[HMR]?.fn ?? incoming;
+
+			// No-op if implementation hasn't changed
+			if (next_fn === wrapper[HMR].fn) return;
+
+			set(cur, next_fn);
+			wrapper[HMR].fn = next_fn;
+
+			// Transfer live tracked ref to incoming wrapper so chained
+			// HMR cycles (rapid edits) continue to work correctly
+			var incoming_meta = /** @type {any} */ (incoming)[HMR];
+			if (incoming_meta) {
+				incoming_meta.current = cur;
 			}
 		},
 	};
