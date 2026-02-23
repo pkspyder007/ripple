@@ -4567,9 +4567,10 @@ function create_tsx_with_typescript_support(comments) {
  * @param {AnalysisResult} analysis - Analysis result
  * @param {boolean} to_ts - Whether to generate TypeScript output
  * @param {boolean} minify_css - Whether to minify CSS output
+ * @param {boolean} [hmr=false] - Whether to inject HMR wrapper and accept callback
  * @returns {{ ast: AST.Program, js: { code: string, map: RawSourceMap, post_processing_changes?: PostProcessingChanges, line_offsets?: LineOffsets }, css: string, errors:  RippleCompileError[]}}
  */
-export function transform_client(filename, source, analysis, to_ts, minify_css) {
+export function transform_client(filename, source, analysis, to_ts, minify_css, hmr = false) {
 	/** @type {TransformClientState} */
 	const state = {
 		imports: new Set(),
@@ -4619,6 +4620,82 @@ export function transform_client(filename, source, analysis, to_ts, minify_css) 
 	}
 
 	body.push(...program.body);
+
+	if (hmr) {
+		const decls = analysis.component_metadata || [];
+
+		// Collect all components: named decls + default export if present
+		const targets = [];
+
+		for (const node of body) {
+			if (node.type === 'ExportDefaultDeclaration') {
+				const decl = node.declaration;
+				let name;
+
+				if (decl.type === 'Identifier') {
+					name = decl.name;
+				} else if ((decl.type === 'FunctionDeclaration' || decl.type === 'Component') && decl.id) {
+					name = decl.id.name;
+				} else {
+					name = analysis.module.filename
+						.split('/')
+						.pop()
+						.replace(/\.[^.]+$/, '');
+				}
+
+				targets.push({ id: name, exportKey: 'default' });
+				break;
+			}
+		}
+
+		for (const decl of decls) {
+			// Avoid duplicating if already added via default export
+			if (!targets.find((t) => t.id === decl.id)) {
+				targets.push({ id: decl.id, exportKey: decl.id });
+			}
+		}
+
+		if (targets.length === 0) {
+			console.warn(`No components to HMR in ${analysis.module.filename}`);
+		} else {
+			const import_meta = {
+				type: 'MetaProperty',
+				meta: b.id('import'),
+				property: b.id('meta'),
+				metadata: { path: [] },
+			};
+			const import_meta_hot = b.member(import_meta, 'hot');
+
+			const hmr_block = b.block([
+				// Wrap all components
+				...targets.map(({ id }) =>
+					b.stmt(b.assignment('=', b.id(id), b.call('_$_.hmr', b.id(id)))),
+				),
+
+				// Single accept handler that updates all
+				b.stmt(
+					b.call(
+						b.member(import_meta_hot, 'accept'),
+						b.arrow(
+							[b.id('module')],
+							b.block(
+								targets.map(({ id, exportKey }) =>
+									b.stmt(
+										b.call(
+											b.member(b.member(b.id(id), b.id('_$_.HMR'), true), 'update'),
+											b.member(b.id('module'), exportKey === 'default' ? 'default' : id),
+										),
+									),
+								),
+							),
+						),
+					),
+				),
+			]);
+
+			body.push(b.if(import_meta_hot, hmr_block, null));
+		}
+	}
 
 	if (state.events.size > 0) {
 		body.push(

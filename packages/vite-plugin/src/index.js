@@ -964,6 +964,7 @@ import { hydrate, mount } from 'ripple';
 					const { js, css } = await compile(code, filename, {
 						mode: ssr ? 'server' : 'client',
 						dev: config?.command === 'serve',
+						hmr: config?.command === 'serve' && !ssr,
 					});
 
 					// Track modules with #server blocks for RPC (client build only)
